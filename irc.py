@@ -6,6 +6,7 @@ LINE_ENDINGS = '\r\n'    # This is appended to all messages sent by the socket (
 
 class IRC:
     irc = socket.socket()
+
     def __init__(self):
         self.irc = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
@@ -28,8 +29,9 @@ class IRC:
 
     def get_text(self):
         text = self.irc.recv(4096)  # receive the text
-
+        if str(text)[2:16] == ':tmi.twitch.tv':  # first two chars are trash- checking if its session open confirmation
+            print('initiated')
+            return self.get_text()  # do not pass the first message, its not a user message. return the next one
         if str(text).find('PING') != -1:
             self.irc.send(('PONG ' + str(text).split()[1] + 'rn').encode(encoding))
-
         return text
