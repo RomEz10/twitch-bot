@@ -9,3 +9,7 @@ class database:
     chatter.Base.metadata.create_all(engine)
     session = sessionmaker(bind=engine)()
 
+    def add(self, other):
+        print(self.session.query(chatter.Chatter.twitch_id).filter(chatter.Chatter.twitch_id == other.twitch_id))
+        for Chatter in self.session.query(chatter.Chatter.twitch_id).filter(chatter.Chatter.twitch_id == other.twitch_id):
+            print('found userid ' + Chatter)
