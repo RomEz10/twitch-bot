@@ -11,7 +11,7 @@ draw_game = draw_game.DrawGame()
 draw_timer = threading.Timer(30.0, draw_game.timer)  # thread that limits the draw game to 30 seconds by calling timer
 
 
-def parseCommand(msg):
+def parse_command(msg):
     # separate command from additional argument
     print('space is found in ' + str(msg.find(' ')))  # DOES NOT SUPPORT TWO ARG RIGHT NOW
     if msg.find(' ') != -1:  # check if there are args
@@ -25,24 +25,18 @@ def parseCommand(msg):
 
 
 def draw(arg):
-    if draw_game.on_going is True:  # if a game is currently running
-        if draw_game.answer(arg) is True:
-            draw_timer.cancel()  # if answer was right cancel the timer and end the game
-    if arg == 'start':  # command argument was start to initiate a game
-        draw_game.on_going = True
-        draw_game.start_game()  # generate draw object
-        draw_timer.start()  # start the timeout timer
-    print(draw_game.on_going)
-    print(draw_game.draw)
+    draw_game.draw_command(arg)
     return 'draw'
 
-def exeCommand(command):
+
+def exe_command(command):
     print(command)
-    commands = {
+    commands = {  # using dict as switch case
         'draw': draw
     }
-    commanda = commands.get(command[0])
-    print(commanda(command[1]))
+    method = commands.get(command[0])
+    arg = command[1]
+    print(method(arg))
 
 
 server = 'irc.chat.twitch.tv'
@@ -70,9 +64,8 @@ while 1:
         user_id = user_id[0].get('id', 'none')  # response is JSON with a list (with one item) inside 'data' var
     print('userid is: ' + str(user_id))
     chatter = Chatter(twitch_id=user_id, name=username, points=0, guesses=0)
-    db.session.add(chatter)  # add a chatter to the database- only POC for now, gonna add chatters only if they get the correct answer
-    db.session.commit()
+    db.add(db, chatter)
     if msg[:1] == '!':  # if first char is !- than its a command
-        command = parseCommand(msg)
-        exeCommand(command)
+        command = parse_command(msg)
+        exe_command(command)
 
