@@ -34,4 +34,5 @@ class IRC:
             return self.get_text()  # do not pass the first message, its not a user message. return the next one
         if str(text).find('PING') != -1:
             self.irc.send(('PONG ' + str(text).split()[1] + 'rn').encode(encoding))
+            return self.get_text()
         return text
