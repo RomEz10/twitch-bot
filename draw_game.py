@@ -12,9 +12,9 @@ class DrawGame:
     draw = ''
     draw_timer = ''
 
-    def draw_command(self, arg):
+    def draw_command(self, arg, username, irc):
         if self.on_going is True:  # if a game is currently running
-            if self.answer(arg) is True:
+            if self.answer(arg, username, irc) is True:
                 self.draw_timer.cancel()  # if answer was right cancel the timer and end the game
         else:
             if arg == 'start':  # command argument was start to initiate a game
@@ -30,10 +30,10 @@ class DrawGame:
         self.draw = random.choice(self.choices)
         print('you should draw ' + self.draw)
 
-    def answer(self, answer):  # check answer, if true stop the game
+    def answer(self, answer, username, irc):  # check answer, if true stop the game
         if answer == self.draw:
             self.draw = False
-            print('correct guess!')
+            irc.send('kapp0t', username + ' got the answer right!')
             return True
         else:
             print('incorrect guess.')
