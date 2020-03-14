@@ -9,6 +9,10 @@ class IRC:
 
     def __init__(self):
         self.irc = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.server = ''
+        self.channel = ''
+        self.botnick = ''
+        self.auth = ''
 
     def send(self, chan, msg):
         full_msg = "PRIVMSG" + " #" + chan + " :" + msg + LINE_ENDINGS
@@ -22,21 +26,38 @@ class IRC:
 
     def connect(self, server, channel, botnick, auth):
         # defines the socket
+        self.server = server
+        self.channel = channel
+        self.botnick = botnick
+        self.auth = auth
         print("connecting to:" + server)
         self.irc.connect((server, 6667))  # connects to the server
         self.irc.send(("PASS " + auth + LINE_ENDINGS + "NICK " + botnick + LINE_ENDINGS ).encode(encoding))
         self.irc.send(("JOIN #" + channel + LINE_ENDINGS).encode(encoding))  # join the chan
 
     def get_msg(self):
-        text = self.irc.recv(4096)  # receive the text
-        if str(text)[2:16] == ':tmi.twitch.tv':  # first two chars are trash- checking if its session open confirmation
-            print('initiated')
-            return self.get_msg()  # do not pass the first message, its not a user message. return the next one
-        if str(text).find('PING') != -1:
-            self.irc.send(('PONG ' + str(text).split()[1] + 'rn').encode(encoding))
+        text = self.irc.recv(4096)  # receive the text, if empty socket was closed
+        if text:
+            if str(text)[2:16] == ':tmi.twitch.tv':  # first two chars are trash- checking if its session open confirmation
+                print('initiated')
+                return self.get_msg()  # do not pass the first message, its not a user message. return the next one
+            if str(text).find('PING') != -1:
+                self.irc.send(('PONG ' + str(text).split()[1] + 'rn').encode(encoding))
+                return self.get_msg()
+            text = text.decode(encoding)
+            print('raw: ' + text)
+            msg = text[text.rfind(':') + 1:-2]  # parse the IRC string to get the msg -2 removes the \r\n in the end of msg
+            username = text[text.find(':') + 1:text.find('!')]
+            return msg, username
+        else:
+            print('closed')
+            print('wait ' + self.server + self.channel + self.botnick + self.auth)
+            self.irc.close()
+            self.irc = socket.socket()
+            server = self.server
+            channel = self.channel
+            botnick = self.botnick
+            auth = self.auth
+            self.__init__()
+            self.connect(server, channel, botnick, auth)
             return self.get_msg()
-        text = text.decode(encoding)
-        print('raw: ' + text)
-        msg = text[text.rfind(':') + 1:-2]  # parse the IRC string to get the msg -2 removes the \r\n in the end of msg
-        username = text[text.find(':') + 1:text.find('!')]
-        return msg, username
