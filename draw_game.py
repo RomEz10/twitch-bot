@@ -12,28 +12,30 @@ class DrawGame:
     draw = ''
     draw_timer = ''
 
-    def draw_command(self, arg, username, irc):
+    def draw_command(self, arg, username, irc, db, chat):
         if self.on_going is True:  # if a game is currently running
-            if self.answer(arg, username, irc) is True:
+            if self.answer(arg, username, irc, db, chat) is True:
                 self.draw_timer.cancel()  # if answer was right cancel the timer and end the game
         else:
             if arg == 'start':  # command argument was start to initiate a game
                 self.draw_timer = threading.Timer(30.0,
                                                   self.timer)
                 self.on_going = True
-                self.start_game()  # generate draw object
+                self.start_game(irc)  # generate draw object
                 self.draw_timer.start()  # start the timeout timer
         print(self.on_going)
         return 'draw'
 
-    def start_game(self):  # start the game and pick a random object to draw
+    def start_game(self, irc):  # start the game and pick a random object to draw
         self.draw = random.choice(self.choices)
-        print('you should draw ' + self.draw)
+        irc.send_whisper('kapp0t', 'hakafaka', 'you should draw ' + self.draw)
 
-    def answer(self, answer, username, irc):  # check answer, if true stop the game
+    def answer(self, answer, username, irc, db, chat):  # check answer, if true stop the game
         if answer == self.draw:
             self.draw = False
             irc.send('kapp0t', username + ' got the answer right!')
+            db.add_points(db, chat, 5)
+            db.add_guesses(db, chat)
             return True
         else:
             print('incorrect guess.')

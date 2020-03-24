@@ -24,14 +24,14 @@ def parse_command(msg):
     return command, arguments
 
 
-def exe_command(command, username):
+def exe_command(command, username, chatter):
     print(command)
     commands = {  # using dict as switch case
         'draw': draw_game.draw_command
     }
     method = commands.get(command[0])
     arg = command[1]
-    method(arg, username, irc)
+    method(arg, username, irc, db, chatter)
 
 
 server = 'irc.chat.twitch.tv'
@@ -43,7 +43,7 @@ auth = creds.auth
 irc.connect(server, channel, nickname, auth)
 irc.send(creds.channel, 'connected FeelsOkayMan')
 access_token = twitch_api.authorize()  # add a function to count the time to refresh token
-db = databse.database
+db = databse.DataBase
 
 while 1:
     msg = irc.get_msg()
@@ -54,5 +54,5 @@ while 1:
     db.add(db, chatter)
     if text[:1] == '!':  # if first char is !- than its a command
         command = parse_command(text)
-        exe_command(command, username)
+        exe_command(command, username, chatter)
 
