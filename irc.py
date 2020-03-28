@@ -47,19 +47,18 @@ class IRC:
                 print('initiated')
                 return self.get_msg()  # do not pass the first message, its not a user message. return the next one
             if str(text).find('PING') != -1:
-                self.irc.send(('PONG :tmi.twitch.tv').encode(encoding))
+                self.irc.send('PONG :tmi.twitch.tv'.encode(encoding))
                 return self.get_msg()
             text = text.decode(encoding)
             print('raw: ' + text)
             msg = text[text.rfind(':')+1:-2]  # parse the IRC string to get the msg -2 removes the \r\n in the end
-            if self.irc_command(msg) == 'PRIVMSG':
+            if self.irc_command(text) == 'PRIVMSG':
                 username = text[text.find(':') + 1:text.find('!')]
                 return msg, username
             else:
                 return self.get_msg()
         else:
             print('closed')
-            print('wait ' + self.server + self.channel + self.botnick + self.auth)
             self.irc.close()
             self.irc = socket.socket()
             server = self.server
