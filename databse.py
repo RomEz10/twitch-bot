@@ -26,4 +26,8 @@ class DataBase:
         self.session.query(chatter.Chatter).filter_by(twitch_id=chat.twitch_id).first().guesses += 1
         self.session.commit()
 
+    def get_points(self, chat):
+        return self.session.query(chatter.Chatter).filter_by(twitch_id=chat.twitch_id).first().points
 
+    def get_guesses(self, chat):
+        return self.session.query(chatter.Chatter).filter_by(twitch_id=chat.twitch_id).first().guesses
