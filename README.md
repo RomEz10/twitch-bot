@@ -12,7 +12,7 @@ Currently the following external packages are required to run this chat bot:
 [requests](https://2.python-requests.org/en/master) - currently only used with http get with authorization header, also provides easy conversion to JSON.
 
 ## Usage
-After downloading all of the required packages should clone this project and run [bot.py](https://github.com/RomEz10/twitch-bot/blob/master/bot.py)
+After downloading all of the required packages should clone this project, modify [creds.py](https://github.com/RomEz10/twitch-bot/blob/master/creds.py) to match your api keys and run [bot.py](https://github.com/RomEz10/twitch-bot/blob/master/bot.py)
 
 ## Games
 ### Draw
