@@ -1,5 +1,7 @@
 import requests
 import creds
+from urllib.parse import urlencode, quote_plus
+# following this doc https://dev.twitch.tv/docs/authentication/getting-tokens-oauth/#oauth-client-credentials-flow
 
 clientid = creds.clientid
 client_secret = creds.client_secret
@@ -15,6 +17,31 @@ def authorize():
 
 
 access_token = authorize()
+
+
+def refresh_token():
+    params = {'grant_type': 'refresh_token', 'refresh_token': creds.refresh_token, 'client_id': clientid,
+              'client_secret': client_secret}
+    response = requests.post('https://id.twitch.tv/oauth2/token?' + urlencode(params, quote_via=quote_plus))
+    print(response.content)
+    token = response.json().get('access_token', 'non')
+    print(token)
+    refresh_token = response.json().get('refresh_token', 'non')
+    if (token or refresh_token) == 'non':
+        raise Exception('no token received')
+    else:
+        creds.whispers_token = token
+        creds.refresh_token = refresh_token
+
+
+def validate_token():
+    response = requests.get('https://id.twitch.tv/oauth2/validate',
+                            headers={'Authorization': 'OAuth ' + creds.whispers_token})
+    print(str(response.status_code))
+    if response.status_code == 200:
+        return True
+    else:
+        return False
 
 
 def get_username_from_id(user_id):
