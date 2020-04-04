@@ -1,0 +1,12 @@
+<!DOCTYPE html>
+<head>twitch oauth token generator</head>
+<body>
+	<p><a id='link'>click</a></p>
+</body>
+<script type="text/javascript">
+	var link = 'https://id.twitch.tv/oauth2/authorize'
+	var client_id = 'add your own client id'
+	var redirect_uri = 'http://localhost:8000'
+	link += '?client_id=' + client_id + '&redirect_uri=' + redirect_uri + '&response_type=code&scope=whispers:read'
+	document.getElementById('link').href = link
+</script>
