@@ -12,32 +12,34 @@ class DrawGame:
     draw = ''
     draw_timer = ''
 
-    def draw_command(self, arg, username, irc, db, chat):
+    async def draw_command(self, arg, username, irc, db, chat):
         if arg == 'wins':
-            irc.send(irc.channel, username + ', you have ' + str(db.get_guesses(db, chat)) + ' wins')
+            await irc.send(irc.channel, username + ', you have ' +
+                                                                 str(db.get_guesses(db, chat)) + ' wins')
         else:
             if self.on_going is True:  # if a game is currently running
-                if self.answer(arg, username, irc, db, chat) is True:
+                if await self.answer(arg, username, irc, db, chat) is True:
                     self.draw_timer.cancel()  # if answer was right cancel the timer and end the game
             else:
                 if arg == 'start':  # command argument was start to initiate a game
                     self.draw_timer = threading.Timer(60.0,
                                                       self.timer)
                     self.on_going = True
-                    self.start_game(irc)  # generate draw object
+                    await self.start_game(irc)  # generate draw object
                     self.draw_timer.start()  # start the timeout timer
         print(self.on_going)
         return 'draw'
 
-    def start_game(self, irc):  # start the game and pick a random object to draw
+    async def start_game(self, irc):  # start the game and pick a random object to draw
         self.draw = random.choice(self.choices)
-        irc.send_whisper(irc.channel, irc.channel, 'you should draw ' + self.draw)
-        irc.send(irc.channel, 'Drawing game has started! you have a minute to guess the right answer!')
+        await irc.send_whisper(irc.channel, irc.channel, 'you should draw '
+                                                                     + self.draw)
+        await irc.send(irc.channel, 'Drawing game has started! you have a minute to guess the right answer!')
 
-    def answer(self, answer, username, irc, db, chat):  # check answer, if true stop the game
+    async def answer(self, answer, username, irc, db, chat):  # check answer, if true stop the game
         if answer == self.draw:
             self.on_going = False
-            irc.send(irc.channel, username + ' got the answer right!')
+            await irc.send(irc.channel, username + ' got the answer right!')
             db.add_points(db, chat, 5)
             db.add_guesses(db, chat)
             return True

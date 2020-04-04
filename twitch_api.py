@@ -37,7 +37,7 @@ def refresh_token():
 def validate_token():
     response = requests.get('https://id.twitch.tv/oauth2/validate',
                             headers={'Authorization': 'OAuth ' + creds.whispers_token})
-    print(str(response.status_code))
+    print('in validate ' + str(response.status_code))
     if response.status_code == 200:
         return True
     else:
