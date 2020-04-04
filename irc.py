@@ -31,7 +31,6 @@ class IRC:
     async def send_whisper(self, chan, target, msg):
         full_msg = "PRIVMSG" + " #" + chan + " :/w " + target + ' ' + msg + LINE_ENDINGS
         print(full_msg)
-        #self.irc.send(full_msg.encode(encoding))
         self.writer.write(full_msg.encode(encoding))
         await self.writer.drain()
 
@@ -43,19 +42,15 @@ class IRC:
         self.auth = auth
         print("connecting to:" + server)
         self.reader, self.writer = await asyncio.open_connection(server, 6667)
-        #self.irc.connect((server, 6667))  # connects to the server
-        #self.irc.send(("PASS " + auth + LINE_ENDINGS + "NICK " + botnick + LINE_ENDINGS).encode(encoding))
         self.writer.write(("PASS " + auth + LINE_ENDINGS + "NICK " + botnick + LINE_ENDINGS).encode(encoding))
-        #self.irc.send(("JOIN #" + channel + LINE_ENDINGS).encode(encoding))  # join the chan
         self.writer.write(("JOIN #" + channel + LINE_ENDINGS).encode(encoding))
         await self.writer.drain()
 
     async def get_msg(self):
         text = await self.reader.readline()  # receive the text, if empty socket was closed
         if text:
-            if str(text)[2:16] == ':tmi.twitch.tv':  # first 2 chars are trash- checking if its session open confirmation
-                print('initiated')
-                return await self.get_msg()  # do not pass the first message, its not a user message. return the next one
+            if str(text)[2:16] == ':tmi.twitch.tv':  # first 2 chars are trash+checking if its session open confirmation
+                return await self.get_msg()  # do not pass the first message, its not a user msg, return the next one
             if str(text).find('PING') != -1:
                 self.writer.write('PONG :tmi.twitch.tv'.encode(encoding))
                 await self.writer.drain()
@@ -70,12 +65,10 @@ class IRC:
                 return await self.get_msg()
         else:
             print('closed')
-            #self.irc.close()
-            #self.irc = socket.socket()
             server = self.server
             channel = self.channel
             botnick = self.botnick
             auth = self.auth
             self.__init__()
             await self.connect(server, channel, botnick, auth)
-            return self.get_msg()
+            return await self.get_msg()
