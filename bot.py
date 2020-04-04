@@ -31,9 +31,12 @@ async def exe_command(command, username, chatter):
     commands = {  # using dict as switch case
         'draw': draw_game.draw_command
     }
-    method = commands.get(command[0])
-    arg = command[1]
-    await method(arg, username, irc, db, chatter)
+    if command in commands:
+        method = commands.get(command[0])
+        arg = command[1]
+        await method(arg, username, irc, db, chatter)
+    else:
+        pass  # command doesn't exist
 
 
 async def listen_to_chat():
