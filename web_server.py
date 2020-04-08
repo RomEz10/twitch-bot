@@ -48,7 +48,7 @@ class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
 
     @staticmethod
     def get_token(code):
-        response = post('https://id.twitch.tv/oauth2/token?client_id=' + creds.clientid +
+        response = post('https://id.twitch.tv/oauth2/token?client_id=' + creds.client_id +
                                  '&client_secret=' + creds.client_secret +
                                  '&code=' + code +
                                  '&grant_type=authorization_code&redirect_uri=http://localhost:8000')
