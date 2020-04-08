@@ -11,10 +11,12 @@ Currently the following external packages are required to run this chat bot:
 
 [requests](https://2.python-requests.org/en/master) - handles http get + post, also provides easy conversion to JSON.
 
-[websockets](https://websockets.readthedocs.io) - easy websocket implementation currently implemented in whispers.py
+[websockets](https://websockets.readthedocs.io) - easy websocket implementation currently implemented in [whispers.py](https://github.com/RomEz10/twitch-bot/blob/master/whispers.py)
+
+access oauth token with 'whispers:read' scope, refer to to the [wiki](https://github.com/RomEz10/twitch-bot/wiki) if you don't know how to get one
 
 ## Usage
-After downloading all of the required packages should clone this project, modify [creds.py](https://github.com/RomEz10/twitch-bot/blob/master/creds.py) to match your api keys and run [bot.py](https://github.com/RomEz10/twitch-bot/blob/master/bot.py)
+If you want to run this bot please follow the tutorial in the [wiki](https://github.com/RomEz10/twitch-bot/wiki)
 
 ## Games
 ### Draw
