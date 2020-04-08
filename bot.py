@@ -1,5 +1,4 @@
 from irc import *
-import requests
 import draw_game
 import threading
 import databse
@@ -8,6 +7,8 @@ import creds
 import twitch_api
 import whispers
 import asyncio
+import pickle
+from pathlib import Path
 
 draw_game = draw_game.DrawGame()
 draw_timer = threading.Timer(30.0, draw_game.timer)  # thread that limits the draw game to 30 seconds by calling timer
@@ -52,11 +53,18 @@ async def listen_to_chat():
             await exe_command(command, username, chatter)
 
 server = 'irc.chat.twitch.tv'
-
+creds_p = Path('creds.p')
+if creds_p.is_file():
+    print('its a file')
+    creds_dict = pickle.load(open('creds.p', 'rb'))
+    creds.whispers_token = creds_dict['whispers_token']
+    creds.refresh_token = creds_dict['refresh_token']
+    creds.refresh_timer = creds_dict['refresh_timer']
 irc = IRC()
 channel = creds.channel
 nickname = creds.nickname
 auth = creds.auth
+twitch_api.refresh_tokens()
 connect = irc.connect(server, channel, nickname, auth)
 send = irc.send(creds.channel, 'connected FeelsOkayMan')
 asyncio.get_event_loop().run_until_complete(connect)
