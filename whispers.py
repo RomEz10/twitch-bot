@@ -7,13 +7,13 @@ import creds
 import socket
 import threading
 
-request = {'type': 'LISTEN', 'data': {'topics': ['whispers.' + str('USER ID INTEGER')]}}
+request = {'type': 'LISTEN', 'data': {'topics': ['whispers.' + str(416678221)]}}
 ws = ''
 
 
 async def listen_to_whispers():
     request['data']['auth_token'] = creds.whispers_token
-    asyncio.ensure_future(validate_tokens_loop())
+    asyncio.create_task(validate_tokens_loop())
     refresh_timer = threading.Timer(creds.refresh_timer, twitch_api.refresh_tokens)
     refresh_timer.start()
     print('timer is ' + str(creds.refresh_timer))
@@ -60,9 +60,11 @@ async def listen_to_whispers():
                     else:
                         break  # break if token is different from creds.token - means it has refreshed
         except socket.gaierror:
+            print('socket error')
             # log something
             continue
         except ConnectionRefusedError:
+            print('refused')
             # log something else
             continue
 
@@ -75,3 +77,4 @@ async def validate_tokens_loop():
             request['data']['auth_token'] = creds.whispers_token
             if ws is not '':
                 await ws.close()
+        await asyncio.sleep(1200)

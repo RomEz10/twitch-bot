@@ -75,6 +75,3 @@ twitch_api.validate_token()
 loop = asyncio.get_event_loop()
 gather = asyncio.gather(listen_to_chat(), whispers.listen_to_whispers())
 loop.run_until_complete(gather)
-
-
-
