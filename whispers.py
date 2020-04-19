@@ -44,7 +44,15 @@ async def listen_to_whispers():
                         try:
                             reply = await asyncio.wait_for(ws.recv(), timeout=creds.refresh_timer)
                             print(reply)
-                            reply_dict = json.JSONDecoder().decode(reply)
+                            reply_dict = json.loads(reply)
+                            if reply_dict.get('data'):  # If doesn't have data its not a reply we want to parse
+                                # "Typically, message is a JSON object that has been escaped and cast into a string."
+                                message = json.loads(reply_dict.get('data').get('message'))
+                                if message.get('type') == 'whisper_received':
+                                    # Some times you get type thread which is not documented.
+                                    data = json.loads(message.get('data'))
+                                    body = data.get('body')
+                                    sent_from = data.get('from_id')
                             if 'error' in reply_dict and reply_dict['error'] == 'ERR_BADAUTH':
                                 twitch_api.refresh_tokens()
                                 request['data']['auth_token'] = creds.whispers_token
