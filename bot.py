@@ -1,6 +1,5 @@
 from irc import *
 import draw_game
-import threading
 import databse
 from chatter import Chatter
 import creds
@@ -11,7 +10,6 @@ import pickle
 from pathlib import Path
 
 draw_game = draw_game.DrawGame()
-draw_timer = threading.Timer(30.0, draw_game.timer)  # thread that limits the draw game to 30 seconds by calling timer
 
 
 def parse_command(msg):
@@ -32,7 +30,7 @@ async def exe_command(command, username, chatter):
     commands = {  # using dict as switch case
         'draw': draw_game.draw_command
     }
-    if command in commands:
+    if command[0] in commands:
         method = commands.get(command[0])
         arg = command[1]
         await method(arg, username, irc, db, chatter)
