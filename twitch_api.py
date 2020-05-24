@@ -2,6 +2,7 @@ import requests
 import creds
 from urllib.parse import urlencode, quote_plus
 import pickle
+import offline_lists
 
 # following this doc https://dev.twitch.tv/docs/authentication/getting-tokens-oauth/#oauth-client-credentials-flow
 
@@ -36,10 +37,12 @@ def refresh_tokens():
         print(token)
         refresh_token = response.get('refresh_token', 'non')
         timeout = response.get('expires_in', 0)
+        scopes = response.get('scope', [])
         if (token or refresh_token) == 'non':
             raise Exception('no token received')
         else:
-            creds.whispers_token = token
+            creds.scopes = scopes
+            creds.oauth_user_token = token
             creds.refresh_token = refresh_token
             if int(timeout) > 5000:
                 timeout = int(timeout) - 2500
@@ -50,17 +53,20 @@ def refresh_tokens():
             else:
                 timeout = 0
             creds.refresh_timer = int(timeout)
-            creds_dict = {'whispers_token': token, 'refresh_token': refresh_token, 'refresh_timer': int(timeout)}
+            creds_dict = {'oauth_user_token': token, 'refresh_token': refresh_token, 'refresh_timer': int(timeout),
+                          'scopes': scopes}
             pickle.dump(creds_dict, open('creds.p', 'wb'))
 
 
 def validate_token():
     # checking if oauth token still valid with twitch
     response = requests.get('https://id.twitch.tv/oauth2/validate',
-                            headers={'Authorization': 'OAuth ' + creds.whispers_token})
+                            headers={'Authorization': 'OAuth ' + creds.oauth_user_token})
     if response.status_code == 200:
         # if response is 200 token is valid
-        timeout = response.json().get('expires_in', 0)
+        response = response.json()
+        timeout = response.get('expires_in', 0)
+        scopes = response.get('scopes', [])
         if int(timeout) > 5000:
             timeout = int(timeout) - 2500
             # refresh a little bit before timer expires
@@ -70,8 +76,9 @@ def validate_token():
         else:
             timeout = 0
         creds.refresh_timer = int(timeout)
-        creds_dict = {'whispers_token': creds.whispers_token, 'refresh_token': creds.refresh_token,
-                      'refresh_timer': creds.refresh_timer}
+        creds.scopes = scopes
+        creds_dict = {'oauth_user_token': creds.oauth_user_token, 'refresh_token': creds.refresh_token,
+                      'refresh_timer': creds.refresh_timer, 'scopes': creds.scopes}
         pickle.dump(creds_dict, open('creds.p', 'wb'))
         return True
     else:
@@ -80,13 +87,12 @@ def validate_token():
 
 def get_username_from_id(user_id):
     # using twitch's api to get username from id
-    response = requests.get('https://api.twitch.tv/helix/users?id=' + user_id,
-                            headers={'Authorization': 'Bearer ' + access_token[0]})
+    response = requests.get('https://api.twitch.tv/helix/users?id=' + str(user_id),
+                            headers={'Authorization': 'Bearer ' + access_token[0], 'Client-ID': creds.client_id})
     if response.status_code != 200:
         raise Exception('Response not successful: ' + str(response.status_code))
     else:
         response = response.json()
-        print('dude ' + str(response))
         username = response.get('data', 'none')
         if username != 'none':
             username = username[0].get('display_name', 'none')  # response is JSON with a list in 'data' var
@@ -96,10 +102,11 @@ def get_username_from_id(user_id):
 
 def get_id_from_username(username):
     # using twitch's api to get id from username
+    print('https://api.twitch.tv/helix/users?login=' + username + str(access_token[0]))
     response = requests.get('https://api.twitch.tv/helix/users?login=' + username,
-                            headers={'Authorization': 'Bearer ' + access_token[0]})
+                            headers={'Authorization': 'Bearer ' + access_token[0], 'Client-ID': creds.client_id})
     if response.status_code != 200:
-        raise Exception('Response not successful: ' + str(response.status_code))
+        raise Exception('Response not successful: ' + str(response.status_code) + ' ' + str(response.json()))
     else:
         response = response.json()
         print(response)
@@ -113,7 +120,7 @@ def get_id_from_username(username):
 def get_bttv_emotes(username):
     # gets both channel shared and global emotes, inserting them into dict with 'shared_emotes' and 'global_emotes'
     # 'global_emotes' as keys
-    # if list inside dict is empty http response wasn't with status_code 200. check with if <list>:
+    # if response code is not 200 something went wrong, currently don't care to figure out what went wrong
 
     # gonna include response json
 
@@ -150,7 +157,7 @@ def get_bttv_emotes(username):
 def get_ffz_emotes(username):
     # gets both channel emotes and global, inserting both into dict with 'channel_emotes' and 'global_emotes' as keys
     # gonna include response json
-    # if list inside dict is empty http response wasn't with status_code 200. check with if <list>:
+    # if response code is not 200 something went wrong, currently don't care to figure out what went wrong
 
     # getting channel emotes:
     response = requests.get('https://api.frankerfacez.com/v1/room/' + username)
@@ -187,7 +194,7 @@ def get_ffz_emotes(username):
 def get_twitch_emotes(username):
     # gets both channel emotes and global, inserting both into dict with 'channel_emotes' and 'global_emotes' as keys
     # gonna include response json
-    # if list inside dict is empty http response wasn't with status_code 200. check with if <list>:
+    # if response code is not 200 something went wrong, currently don't care to figure out what went wrong
 
     # getting channel emotes:
     # not using official twitch api because they require emote_set id which cannot be obtained for channel id/name
@@ -200,10 +207,14 @@ def get_twitch_emotes(username):
     # using the older v5 api to get these because newer twitch api have this yet. emote_sets = 0 means global emotes
     response = requests.get('https://api.twitch.tv/kraken/chat/emoticon_images?emotesets=0',
                             headers={'Accept': 'application/vnd.twitchtv.v5+json', 'Client-ID': creds.client_id})
-    global_emotes = []
+    global_emotes = []  # unused but kept for consistency
     if response.status_code == 200:
-        print('raw twitch global emotes: ' + str(response.json()))
+        print('raw twitch global emotes: ' + str(response.json().get('emoticon_sets').get('0')))
         global_emotes = response.json().get('emoticon_sets').get('0')
+        offline_lists.offline_twitch_global_emotes_list = global_emotes  # update global emotes offline list
+    else:
+        print(str(response.status_code))
+        global_emotes = offline_lists.offline_twitch_global_emotes_list  # list contains global emotes if fetching fails
     # merging both into dict
     emotes_sets = [channel_emotes, global_emotes]
     emotes_sets_names = ['channel_emotes', 'global_emotes']
@@ -218,3 +229,16 @@ def get_twitch_emotes(username):
         emotes[emotes_sets_names[i]] = emotes_array
     return emotes
 
+
+def get_all_emotes(username):
+    # getting all emotes this channel might have and returning it as a list
+    # TODO: add a filter. e.g if user only want twitch emotes and not 3rd party thing
+    ffz_emotes = get_ffz_emotes(username)
+    bttv_emotes = get_bttv_emotes(username)
+    twitch_emotes = get_twitch_emotes(username)
+    all_emotes_dict = [ffz_emotes, bttv_emotes, twitch_emotes]
+    all_emotes_list = []
+    for emotes in all_emotes_dict:
+        for emotes_set in emotes.keys():
+            all_emotes_list += emotes.get(emotes_set)
+    return all_emotes_list
