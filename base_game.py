@@ -17,15 +17,7 @@ class BaseGame:
         self.irc = irc
 
     async def generic_game_command(self, arg, username, db, chat):
-        if arg == 'wins':
-            await self.irc.send(self.irc.channel, username + ', you have ' +
-                                str(db.get_guesses(db, chat)) + ' wins')
-        else:
-            if self.on_going is True:  # if a game is currently running
-                if await self.check_answer(arg, username, db, chat) is True: # probably should remove this and include it in individual games
-                    self.timer.cancel()  # if answer was right cancel the timer and end the game
-        print(self.on_going)
-        return 'draw'
+        print('override me')
 
     async def start_game(self, opening_msg):  # start the game and pick a random object to draw
         await self.irc.send(self.irc.channel, opening_msg)

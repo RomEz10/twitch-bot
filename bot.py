@@ -9,32 +9,18 @@ import pickle
 from pathlib import Path
 import emote_guess_game
 import base_pubsub
-
-draw_game = draw_game.DrawGame()
-
-
-def parse_command(msg):
-    # separate command from additional argument
-    print('space is found in ' + str(msg.find(' ')))  # DOES NOT SUPPORT TWO ARG RIGHT NOW
-    if msg.find(' ') != -1:  # check if there are args
-        command = msg[1:msg.find(' ')]  # splice the ! and the arg after the command
-        arguments = msg[msg.find(' ') + 1:]  # get arg - arg is the word after the command
-    else:
-        command = msg[1:]  # splice the ! there are not args
-        arguments = ''  # no args
-    print('arg: ' + arguments + ' command: ' + command)
-    return command, arguments
+from helper_methods import parse_command
 
 
 async def exe_command(command, username, chatter):
     print(command)
     commands = {  # using dict as switch case
-        'draw': draw_game.draw_command
+        'draw': draw_game.game_command
     }
     if command[0] in commands:
         method = commands.get(command[0])
         arg = command[1]
-        await method(arg, username, irc, db, chatter)
+        await method(arg, username, db, chatter)
     else:
         pass  # command doesn't exist
 
@@ -72,6 +58,7 @@ connect = irc.connect(server, channel, nickname, auth)
 send = irc.send(creds.channel, 'connected FeelsOkayMan')
 asyncio.get_event_loop().run_until_complete(connect)
 asyncio.get_event_loop().run_until_complete(send)
+draw_game = draw_game.DrawGame(irc)
 emote_guess = emote_guess_game.EmoteGuessGame(irc)
 db = databse.DataBase
 twitch_api.validate_token()

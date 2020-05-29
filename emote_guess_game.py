@@ -16,9 +16,7 @@ class EmoteGuessGame(base_game.BaseGame):
         print('userid: ' + str(userid) + ' channelid: ' + str(twitch_api.get_id_from_username(self.irc.channel)))
         if int(userid) == int(twitch_api.get_id_from_username(self.irc.channel)):
             if arg[0] == 'start':  # command argument was start to initiate a game
-                print('start')
-                if arg[1] in self.choices:
-                    print('arg is choices')
+                if arg[1] in self.choices:  # check if arg is a valid emote
                     self.answer = arg[1]
                     await self.start_game('Emote guessing game has started! '
                                           'you have a minute to guess the right answer!')
