@@ -1,6 +1,7 @@
 import random
 import threading
 import base_game
+from offline_lists import nouns_list
 # when first starts should pick a word from a list of objects to draw and start a timer
 # when either time ends or word is guesses correctly the game should end
 
@@ -8,7 +9,7 @@ import base_game
 class DrawGame(base_game.BaseGame):
     def __init__(self, irc):
         time = 60
-        choices = ['computer', 'camel', 'cup']
+        choices = nouns_list
         super().__init__(choices, time, irc)
 
     async def game_command(self, arg, username, db, chat):
