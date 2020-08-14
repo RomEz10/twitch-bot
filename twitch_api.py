@@ -242,3 +242,13 @@ def get_all_emotes(username):
         for emotes_set in emotes.keys():
             all_emotes_list += emotes.get(emotes_set)
     return all_emotes_list
+
+
+def get_chatters(username):
+    response = requests.get('https://tmi.twitch.tv/group/user/' + username + '/chatters')
+    if response.status_code == 200:
+        all_chatters = []
+        chatters = response.json().get('chatters')
+        for chatter_role in chatters.keys():
+            all_chatters.append(chatters.get(chatter_role))
+    
