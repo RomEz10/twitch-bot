@@ -6,7 +6,7 @@ class BaseGame:
 
     on_going = False
     how_long = 0
-    choices = ['computer', 'camel', 'cup']
+    choices = ''
     answer = ''
     timer = threading.Timer
     irc = ''
