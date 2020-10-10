@@ -1,5 +1,6 @@
 import socket
 import asyncio
+import twitch_api
 
 encoding = 'utf-8'
 LINE_ENDINGS = '\r\n'    # This is appended to all messages sent by the socket (should always be CRLF)
@@ -28,10 +29,24 @@ class IRC:
         self.writer.write(full_msg.encode(encoding))
         await self.writer.drain()
 
+    async def send_bulk(self, chan, msgs):
+        for msg in msgs:
+            full_msg = "PRIVMSG" + " #" + chan + " :" + msg + LINE_ENDINGS
+            self.writer.write(full_msg.encode(encoding))
+        await self.writer.drain()
+
     async def send_whisper(self, chan, target, msg):
         full_msg = "PRIVMSG" + " #" + chan + " :/w " + target + ' ' + msg + LINE_ENDINGS
         print(full_msg)
         self.writer.write(full_msg.encode(encoding))
+        await self.writer.drain()
+
+    async def send_whisper_bulk(self, chan, msgs):
+        for i in range(0, len(msgs)):
+            # TODO: BULK USERNAME FROM ID
+            name = twitch_api.get_username_from_id(msgs[i]['target'])
+            full_msg = "PRIVMSG" + " #" + chan + " :/w " + name + ' ' + msgs[i]['text'] + LINE_ENDINGS
+            self.writer.write(full_msg.encode(encoding))
         await self.writer.drain()
 
     async def connect(self, server, channel, botnick, auth):
@@ -45,6 +60,7 @@ class IRC:
         self.writer.write(("PASS " + auth + LINE_ENDINGS + "NICK " + botnick + LINE_ENDINGS).encode(encoding))
         self.writer.write(("JOIN #" + channel + LINE_ENDINGS).encode(encoding))
         await self.writer.drain()
+        asyncio.create_task(twitch_api.bot_joined_channel(channel))
 
     async def get_msg(self):
         text = await self.reader.readline()  # receive the text, if empty socket was closed
