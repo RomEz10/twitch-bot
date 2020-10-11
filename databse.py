@@ -22,6 +22,12 @@ class DataBase:
         self.session.query(chatter.Chatter).filter_by(twitch_id=chat.twitch_id).first().points += amount
         self.session.commit()
 
+    def add_points_bulk(self, chatters_id, amount):
+        # need to send chatter instead of chatter id but it requires a bit of rework
+        for chat in chatters_id:
+            self.session.query(chatter.Chatter).filter_by(twitch_id=chat).first().points += amount
+        self.session.commit()
+
     def add_guesses(self, chat):
         self.session.query(chatter.Chatter).filter_by(twitch_id=chat.twitch_id).first().guesses += 1
         self.session.commit()
