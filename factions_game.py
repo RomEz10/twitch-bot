@@ -1,38 +1,41 @@
 import base_game
 import twitch_api
-import threading
 import random
 import asyncio
-import chatter
 
 
 class FactionsGame(base_game.BaseGame):
 
+    prep_timer = 30  # time in seconds. this is how long players can join the game.
+    start_delay = 5  # time in seconds. this is how long the delay between the last whisper sent and the start of game.
+    game_timer = 60  # time in seconds. this is how long the spam portion of the game is.
+    win_points = 2  # INT. number of points gained per win.
+    min_factions = 2  # INT. minimum number of factions.
+    max_factions = 4  # INT. maximum number of factions.
     participants = []
     teams = {}
     prep_time = False
-    db = ''
 
-    def __init__(self, irc, ):
+    def __init__(self, irc, db):
         time = 60
         super().__init__([], time, irc)
+        self.db = db
         self.choices = {}
 
     async def game_command(self, arg, username, db, chat):
-        print('game command faction')
-        # before starting a game we need to make sure faction emotes are correct and there are max 4 factions
-        # starting faction game by: !faction <emote> <emote> <emote> <emote>
-        # after starting each chatter has a minute to whisper !join to the bot
-        # after the minute passes the bot assigns everyone a team and whispers them their team back
-        # game starts after 30 seconds and lasts for a minute
+        # before starting a game we need to make sure faction emotes are correct and the max factions value fits the
+        # value in the global var.
+        # starting faction game by: !faction <emote> <emote> <emote> ...
+        # amount of emotes typed in the faction command must be withing or equal to min_factions and max_factions range.
+        # after starting each chatter has to whisper !join to the bot before time runs out (value of prep_timer).
+        # after the time has passed the bot assigns everyone a team and whispers them back their team
+        # game starts after the time of start_delay passes and lasts for the value of game_timer
         # each participant should spam his team's emote, each message containing the emote counts as 1
-        print('in game command')
-        self.db = db
+        # when the game ends the team who spammed the emote the most wins, value of win_points is added to their points
         if chat.name == self.irc.channel:
             if self.on_going is False and self.prep_time is False:
                 emotes = twitch_api.get_all_emotes(username)
-                if 1 < len(arg) <= 4:
-                    # maximum factions allowed are 4 minimum are 2
+                if self.min_factions-1 < len(arg) <= self.max_factions:
                     for faction in arg:
                         # checking which factions streamer wants
                         if faction in emotes:
@@ -52,11 +55,15 @@ class FactionsGame(base_game.BaseGame):
                     else:
                         # if not all the emotes match channel emotes
                         await self.irc.send(username, 'Please make sure you\'ve typed all the emotes correctly')
+                        self.reset_game()
                 else:
-                    await self.irc.send(username, 'Maximum amount of factions allowed are 4')
+                    await self.irc.send(username, 'Maximum amount of factions allowed are ' + str(self.max_factions) +
+                                        ' and the minimum is ' + str(self.min_factions))
 
     async def start_registration(self):
-        self.timer = threading.Timer(60.0, self.timed_method).start()
+        # waiting for everyone to register with a whisper, calling join_game()
+        await asyncio.sleep(self.prep_timer)
+        await self.timed_method()
 
     async def faction_emote(self, emotes, chatter):
         # getting all of the emotes used in a message, if they match one of the factions count it
@@ -66,24 +73,26 @@ class FactionsGame(base_game.BaseGame):
                 self.choices[emote] += 1
 
     async def start_game(self, opening_msg):
+        # starting the game, after the time passes ending it
         self.on_going = True
         await self.irc.send(self.irc.channel, opening_msg)
-        self.timer = threading.Timer(60.0, self.end_game).start()
+        await asyncio.sleep(self.game_timer)
+        await self.end_game()
 
-    def end_game(self):
+    async def end_game(self):
+        # ending the game, finding out the winner, giving away points and resetting.
         if self.on_going is True:
-            self.on_going = False
             most_spammed_emotes = 0
             for choice in self.choices.items():
                 # choice is a tuple (k,v)
                 if not most_spammed_emotes or choice[1] > most_spammed_emotes[1]:
                     most_spammed_emotes = choice
             print('score: ' + str(self.choices))
-            asyncio.new_event_loop().run_until_complete(
-                self.irc.send(self.irc.channel, 'The game has ended, winner team is ' + most_spammed_emotes[0]))
-            self.db.add_points_bulk(self.db, self.teams[most_spammed_emotes[0]], 2)
+            await self.irc.send(self.irc.channel, 'The game has ended, winner team is ' + most_spammed_emotes[0])
+            self.db.add_points_bulk(self.db, self.teams[most_spammed_emotes[0]], self.win_points)
+        self.reset_game()
 
-    def timed_method(self):
+    async def timed_method(self):
         print('in timed ' + str(self.participants) + ' ' + str(self.teams))
         # shuffling the participants list. after that assigning everyone to a team by going through each team and
         # assigning players to each team at a time, remainders are checked before and assigned in the same team loop.
@@ -99,28 +108,37 @@ class FactionsGame(base_game.BaseGame):
                     # if we have remainder add one participant to this faction, list index is len-remainder
                     player_remainder -= 1
                     # reducing remainder till we hit 0, reducing the remainder will increase the index by 1 each loop
-            asyncio.new_event_loop().run_until_complete(self.assign_teams())
-
+            await self.assign_teams()
         else:
-            # TODO: remove run until complete and add something that doesnt blcok the thread
-            asyncio.new_event_loop().run_until_complete(self.irc.send(self.irc.channel,
-                                                                      'Not enough people joined the game.'))
-            self.prep_time = False
+            await self.irc.send(self.irc.channel, 'Not enough people joined the game.')
+            self.reset_game()
             # cancel game
 
     async def join_game(self, twitch_id):
+        # getting called from the pubsub client only if prep_time is True
         self.participants.append(twitch_id)
 
     async def assign_teams(self):
+        # after prep_time has ended this func assigns everyone a team and notifies them, game is starting after that.
         teams = self.teams
-        msgs = [{'text': 'Your team is ' + faction, 'target': player} for faction in teams for player in
-                teams[faction]]
-        print(msgs)
-        await self.irc.send_whisper_bulk(self.irc.channel, msgs)
+        msgs, targets = [], []
+        for faction in teams:
+            for player in teams[faction]:
+                msgs.append('Your team is ' + faction)
+                targets.append(player)
+        await self.irc.send_whisper_bulk(self.irc.channel, msgs, targets=targets)
         msgs = ['All participants have received a whisper with their team, if you didn\'t '
                 'receive a whisper please send me a friend request and retry next game',
-                'The game will start in 10 seconds']
+                'The game will start in ' + str(self.start_delay) + ' seconds']
         await self.irc.send_bulk(self.irc.channel, msgs)
-        await asyncio.sleep(10)
+        await asyncio.sleep(self.start_delay)
         self.prep_time = False  # Game is starting, prep time is over
-        await self.start_game('Teams are assigned please spammerino in the chatterino!')
+        await self.start_game('Teams are assigned. Please spammerino in the chatterino!')
+
+    def reset_game(self):
+        self.participants = []
+        self.teams = {}
+        self.choices = {}
+        self.prep_time = False
+        self.on_going = False
+
