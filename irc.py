@@ -41,12 +41,22 @@ class IRC:
         self.writer.write(full_msg.encode(encoding))
         await self.writer.drain()
 
-    async def send_whisper_bulk(self, chan, msgs):
-        for i in range(0, len(msgs)):
-            # TODO: BULK USERNAME FROM ID
-            name = twitch_api.get_username_from_id(msgs[i]['target'])
-            full_msg = "PRIVMSG" + " #" + chan + " :/w " + name + ' ' + msgs[i]['text'] + LINE_ENDINGS
-            self.writer.write(full_msg.encode(encoding))
+    async def send_whisper_bulk(self, chan, msgs, targets=None):
+        # Requires either msgs list with each item being a dict with 'text' and 'target' keys,
+        # or a msgs list and targets list.
+        # Sends a number of whispers
+        # If targets is provided both msgs and targets are lists, if not, msgs is a list of dict with text and target
+        # Targets are always treated as twitch_ids for now.
+        if targets:
+            targets = twitch_api.get_username_from_id_bulk({'id': targets})
+            for msg, target in zip(msgs, targets):
+                full_msg = "PRIVMSG" + " #" + chan + " :/w " + target + ' ' + msg + LINE_ENDINGS
+                self.writer.write(full_msg.encode(encoding))
+        else:
+            for msg in msgs:
+                target = twitch_api.get_username_from_id(msg['target'])
+                full_msg = "PRIVMSG" + " #" + chan + " :/w " + target + ' ' + msg['text'] + LINE_ENDINGS
+                self.writer.write(full_msg.encode(encoding))
         await self.writer.drain()
 
     async def connect(self, server, channel, botnick, auth):
