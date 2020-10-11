@@ -22,11 +22,12 @@ If you want to run this bot please follow the tutorial in the [wiki](https://git
 ### Draw
 Bot picks an object for streamer to draw, first chatter that guesses right wins.
 ### Emote guesses
-Streamer whispers bot with an emote and chat has to guess, bttv/ffz support if possible
+Streamer whispers bot with an emote and chat has to guess, bttv/ffz supported.
+### Factions
+Everyone in chat is being sorted into factions based on emotes chosen by the streamer, chatters get whispers in which faction they are. The most spammed emote wins (each message containing the emote(s) is count as 1)
 ### Court-house - an idea
 Streamer picks judges, defendant and two lawyers. They both have time to make arguments. Jury (chat) then decides if chatter should be banned.
-### Factions - an idea
-Everyone in chat is being sorted into factions based on popular emotes, chatters get whispers in which faction they are. The most spammed emote wins (each message containing the emote(s) is count as 1)
+
 
 
 ## Contributing
