@@ -3,11 +3,15 @@ import creds
 from urllib.parse import urlencode, quote_plus
 import pickle
 import offline_lists
+import asyncio
 
 # following this doc https://dev.twitch.tv/docs/authentication/getting-tokens-oauth/#oauth-client-credentials-flow
 
 client_id = creds.client_id
 client_secret = creds.client_secret
+ffz_emotes_cached = {}
+bttv_emotes_cached = {}
+twitch_emotes_cached = {}
 
 
 def authorize():
@@ -95,13 +99,40 @@ def get_username_from_id(user_id):
         response = response.json()
         username = response.get('data', 'none')
         if username != 'none':
-            username = username[0].get('display_name', 'none')  # response is JSON with a list in 'data' var
+            username = username[0].get('login', 'none')  # response is JSON with a list in 'data' var
         print('username is: ' + str(username))
         return username
 
 
+def get_username_from_id_bulk(user_ids):
+    # using twitch's api to get username from id
+    # splitting to requests of 100's because twitch limit
+    user_names = []
+    while len(user_ids) > 0:
+        if len(user_ids) > 100:
+            user_ids_request = user_ids[:100]
+            user_ids = user_ids[100:]
+        else:
+            user_ids_request = user_ids
+            user_ids = []
+        url = 'https://api.twitch.tv/helix/users?'
+        response = requests.get(url, params=user_ids_request,
+                                headers={'Authorization': 'Bearer ' + access_token[0], 'Client-ID': creds.client_id})
+        if response.status_code != 200:
+            raise Exception('Response not successful: ' + str(response.status_code) + str(response.json()))
+        else:
+            response = response.json()
+            data = response.get('data', 'none')
+            if data != 'none':
+                for user in data:
+                    user_names.append(user.get('login', 'none'))  # response is JSON with a list in 'data' var
+        print('usernames are: ' + str(user_names))
+        return user_names
+
+
 def get_id_from_username(username):
     # using twitch's api to get id from username
+    # expects to get a dict with {'id': [int, int...]
     print('https://api.twitch.tv/helix/users?login=' + username + str(access_token[0]))
     response = requests.get('https://api.twitch.tv/helix/users?login=' + username,
                             headers={'Authorization': 'Bearer ' + access_token[0], 'Client-ID': creds.client_id})
@@ -115,6 +146,32 @@ def get_id_from_username(username):
             user_id = user_id[0].get('id', 'none')  # response is JSON with a list (with one item) in 'data' var
         print('userid is: ' + str(user_id))
         return user_id
+
+
+def get_id_from_username_bulk(user_names):
+    # using twitch's api to get username from id
+    # splitting to requests of 100's because twitch limit
+    ids = []
+    while len(user_names) > 0:
+        if len(user_names) > 100:
+            user_names_request = user_names[:100]
+            user_names = user_names[100:]
+        else:
+            user_names_request = user_names
+            user_names = []
+        url = 'https://api.twitch.tv/helix/users?'
+        response = requests.get(url, params=user_names_request,
+                                headers={'Authorization': 'Bearer ' + access_token[0], 'Client-ID': creds.client_id})
+        if response.status_code != 200:
+            raise Exception('Response not successful: ' + str(response.status_code) + str(response.json()))
+        else:
+            response = response.json()
+            data = response.get('data', 'none')
+            if data != 'none':
+                for user in data:
+                    ids.append(user.get('id', 'none'))  # response is JSON with a list in 'data' var
+        print('twitch ids are: ' + str(ids))
+        return ids
 
 
 def get_bttv_emotes(username):
@@ -151,6 +208,7 @@ def get_bttv_emotes(username):
             emote_name = emote.get('code')
             emotes_array.append(emote_name)
         emotes[emotes_sets_names[i]] = emotes_array
+    bttv_emotes_cached[username] = emotes
     return emotes
 
 
@@ -188,6 +246,7 @@ def get_ffz_emotes(username):
             emote_name = emote.get('name')
             emotes_array.append(emote_name)
         emotes[emotes_sets_names[i]] = emotes_array
+    ffz_emotes_cached[username] = emotes
     return emotes
 
 
@@ -227,18 +286,55 @@ def get_twitch_emotes(username):
             emote_name = emote.get('code')
             emotes_array.append(emote_name)
         emotes[emotes_sets_names[i]] = emotes_array
+    twitch_emotes_cached[username] = emotes
     return emotes
 
 
 def get_all_emotes(username):
     # getting all emotes this channel might have and returning it as a list
+    # if its the first time running or some are not cached for some reason load it
     # TODO: add a filter. e.g if user only want twitch emotes and not 3rd party thing
-    ffz_emotes = get_ffz_emotes(username)
-    bttv_emotes = get_bttv_emotes(username)
-    twitch_emotes = get_twitch_emotes(username)
+    if username in ffz_emotes_cached:
+        ffz_emotes = ffz_emotes_cached[username]
+    else:
+        ffz_emotes = get_ffz_emotes(username)
+    if username in bttv_emotes_cached:
+        bttv_emotes = bttv_emotes_cached[username]
+    else:
+        bttv_emotes = get_bttv_emotes(username)
+    if username in twitch_emotes_cached:
+        twitch_emotes = twitch_emotes_cached[username]
+    else:
+        twitch_emotes = get_twitch_emotes(username)
     all_emotes_dict = [ffz_emotes, bttv_emotes, twitch_emotes]
     all_emotes_list = []
     for emotes in all_emotes_dict:
         for emotes_set in emotes.keys():
             all_emotes_list += emotes.get(emotes_set)
     return all_emotes_list
+
+
+def get_chatters(username):
+    response = requests.get('https://tmi.twitch.tv/group/user/' + username + '/chatters')
+    if response.status_code == 200:
+        all_chatters = []
+        chatters = response.json().get('chatters')
+        for chatter_role in chatters.keys():
+            all_chatters.append(chatters.get(chatter_role))
+
+
+def refresh_emotes(username):
+    # Refreshing cached emotes from all services
+    get_bttv_emotes(username)
+    get_ffz_emotes(username)
+    get_twitch_emotes(username)
+
+
+bot_in_channel = True
+
+
+async def bot_joined_channel(username):
+    # When the bot joins a channel it starts a timer to refresh emotes
+    while bot_in_channel:
+        refresh_emotes(username)
+        await asyncio.sleep(600)

@@ -14,8 +14,9 @@ class BasePubsub:
     request = {'type': 'LISTEN', 'data': {'topics': ''}}
     ws = ''
     alive = True
+# TODO: refresh token from twitch api not from here it feels dumb
 
-    async def open_pubsub(self, topics, emote_guess_game):
+    async def open_pubsub(self, topics, emote_guess_game, faction_game):
         self.request['data']['topics'] = topics
         self.request['data']['auth_token'] = creds.oauth_user_token
         asyncio.create_task(self.validate_tokens_loop())
@@ -64,9 +65,12 @@ class BasePubsub:
                                             if body[:1] == '!':
                                                 command = helper_methods.parse_command(body)
                                                 # initiate emote guess command
-                                                if command[0] == 'guess':
+                                                if command[0] == 'guess' and command[1]:  #also making sure there are args
                                                     print('command is guess')
                                                     await emote_guess_game.game_command(command[1], sent_from)
+                                                if command[0] == 'join':
+                                                    if faction_game.prep_time:
+                                                        await faction_game.join_game(int(sent_from))
 
                                 if 'error' in reply_dict and reply_dict['error'] == 'ERR_BADAUTH':
                                     twitch_api.refresh_tokens()
