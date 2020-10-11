@@ -1,3 +1,5 @@
+import twitch_api
+
 
 def parse_command(msg):
     # separate command from additional arguments
@@ -14,3 +16,19 @@ def parse_command(msg):
         arguments_array = []  # no args
     print('arg: ' + str(arguments_array) + ' command: ' + command)
     return command, arguments_array
+
+
+def all_msg_emotes(channel, msg):
+    # returns a list with all the emotes used in the message
+    emotes = twitch_api.get_all_emotes(channel)
+    emotes_in_msg = []
+    for i in range(0, len(msg)):
+        space = msg.find(' ')
+        if space != -1:
+            word = msg[:space]
+            msg = msg[space+1:]
+        else:
+            word = msg
+        if word in emotes:
+            emotes_in_msg.append(word)
+    return emotes_in_msg
