@@ -23,12 +23,14 @@ async def exe_command(command, username, chatter):
     if command[0] in commands:
         method = commands.get(command[0])
         arg = command[1]
-        await method(arg, username, db, chatter)
+        asyncio.ensure_future(method(arg, username, db, chatter), loop=loop)
     else:
         pass  # command doesn't exist
 
 
 async def listen_to_chat():
+    # TODO: split between adding chatter to db and the rest, right now it will wait for twitch to answer
+    # before processing the next message
     while True:
         msg = await irc.get_msg()
         text = msg[0]
@@ -42,7 +44,7 @@ async def listen_to_chat():
         elif emote_guess.on_going is True:
             await emote_guess.check_answer(text, username, db, chatter)
         elif faction_game.on_going is True:
-            await faction_game.faction_emote(all_msg_emotes(irc.channel, text), chatter)
+            loop.create_task(faction_game.faction_emote(all_msg_emotes(irc.channel, text), chatter))
 
 server = 'irc.chat.twitch.tv'
 creds_p = Path('creds.p')
@@ -63,10 +65,10 @@ connect = irc.connect(server, channel, nickname, auth)
 send = irc.send(creds.channel, 'connected FeelsOkayMan')
 asyncio.get_event_loop().run_until_complete(connect)
 asyncio.get_event_loop().run_until_complete(send)
+db = databse.DataBase
 draw_game = draw_game.DrawGame(irc)
 emote_guess = emote_guess_game.EmoteGuessGame(irc)
-faction_game = factions_game.FactionsGame(irc)
-db = databse.DataBase
+faction_game = factions_game.FactionsGame(irc, db)
 twitch_api.validate_token()
 loop = asyncio.get_event_loop()
 pubsub_scopes = ['whispers.' + str(416678221)]  # add more scopes as new list item
