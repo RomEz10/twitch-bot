@@ -17,7 +17,6 @@ async def exe_command(command, username, chatter):
     print(command)
     commands = {  # using dict as switch case
         'draw': draw_game.game_command,
-        'names': irc.get_chatters,
         'factions': faction_game.game_command
     }
     if command[0] in commands:
